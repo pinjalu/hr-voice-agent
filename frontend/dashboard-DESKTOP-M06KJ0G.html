@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Dashboard 📊</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="branded-header">
+        <div class="brand-logo">Empiric <span>Infotech</span></div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">HR ADMIN PORTAL</div>
+    </header>
+
+    <div class="container dashboard-container">
+        <div class="card">
+            <h1>📊 HR Admin Dashboard</h1>
+            <div class="accent-line"></div>
+            <p class="subtitle">Review candidate performance and interview results</p>
+
+            <div style="margin-bottom: 3rem; display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="location.href='/'" class="dashboard-btn btn-secondary">
+                    <span>← Back to Interview</span>
+                </button>
+                <button onclick="loadCandidates()" class="dashboard-btn">
+                    <span>🔄 Refresh Data</span>
+                </button>
+            </div>
+
+            <table id="candidate-table">
+                <thead>
+                    <tr>
+                        <th>👤 Candidate</th>
+                        <th>📧 Email</th>
+                        <th>📈 Score</th>
+                        <th>🎯 Status</th>
+                        <th>⚙️ Action</th>
+                    </tr>
+                </thead>
+                <tbody id="candidate-list">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                            Loading candidates...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Details Modal -->
+            <div id="details-view" class="hidden"
+                style="margin-top: 3rem; background: rgba(255,255,255,0.03); padding: 2rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="margin-bottom: 1.5rem;">📋 Candidate Details</h2>
+                <div id="details-content"></div>
+                <button onclick="closeDetails()" style="margin-top: 1.5rem; width: auto; padding: 0.75rem 1.5rem;">
+                    <span style="position: relative; z-index: 1;">✕ Close</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        if (!sessionStorage.getItem('hr_logged_in')) {
+            window.location.href = '/hr_login.html';
+        }
+
+        async function loadCandidates() {
+            const list = document.getElementById('candidate-list');
+            list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">Loading...</td></tr>';
+
+            try {
+                const resp = await fetch('/candidates');
+                const data = await resp.json();
+
+                if (data.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No candidates yet. Complete an interview to see results here!</td></tr>';
+                    return;
+                }
+
+                list.innerHTML = '';
+
+                data.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.style.animation = 'fadeIn 0.5s ease-out';
+                    tr.id = `result-${c.result_id}`;
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: var(--secondary);">${c.name}</td>
+                        <td style="color: var(--text-secondary); font-weight: 600;">${c.email}</td>
+                        <td><strong style="font-size: 1.2rem; color: var(--primary);">${c.score.toFixed(1)}</strong></td>
+                        <td><span class="status-badge status-${c.status.toLowerCase()}">${c.status}</span></td>
+                        <td style="display: flex; gap: 0.5rem;">
+                            <button onclick="viewResult(${c.result_id})" class="dashboard-btn btn-secondary">
+                                👁️ View
+                            </button>
+                            <button onclick="deleteResult(${c.result_id}, '${c.name}')" class="dashboard-btn btn-delete">
+                                🗑️ Delete
+                            </button>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                });
+            } catch (error) {
+                list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: #f5576c;">Failed to load candidates. Please refresh.</td></tr>';
+                console.error(error);
+            }
+        }
+
+        async function viewResult(result_id) {
+            try {
+                const resp = await fetch(`/result/${result_id}`);
+                const data = await resp.json();
+                const content = document.getElementById('details-content');
+
+                const details = data.details || {};
+                const transcript = details.transcript || [];
+                const aptitude = details.aptitude_details || [];
+
+                let html = `
+                    <div style="display: grid; gap: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem;">
+                            <p style="margin-bottom: 0.5rem;"><strong>Name:</strong> ${data.candidate.name}</p>
+                            <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> ${data.candidate.email}</p>
+                            <p><strong>Date:</strong> ${new Date(data.final.created_at).toLocaleString()}</p>
+                        </div>
+                        
+                        <div style="background: rgba(0, 210, 255, 0.1); padding: 1.5rem; border-radius: 0.75rem;">
+                            <h3 style="margin-bottom: 1rem;">📊 Scores</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <p style="margin-bottom: 0.25rem; font-size: 0.9rem; color: var(--text-secondary);">Interview Score</p>
+                                    <p style="font-size: 1.2rem; font-weight: 700;">${data.final.interview_score.toFixed(1)}</p>
+                                </div>
+                                <div>
+                                    <p style="margin-bottom: 0.25rem; font-size: 0.9rem; color: var(--text-secondary);">Aptitude Score</p>
+                                    <p style="font-size: 1.2rem; font-weight: 700;">${data.final.aptitude_score.toFixed(1)}%</p>
+                                </div>
+                            </div>
+                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <p style="font-weight: 600;">Total Score: <span style="font-size: 1.5rem; color: var(--accent); margin-left: 0.5rem;">${data.final.total_score.toFixed(1)}</span></p>
+                            </div>
+                        </div>
+                        
+                        ${transcript.length > 0 ? `
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">💬 Interview Transcript</h3>
+                            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem; max-height: 300px; overflow-y: auto;">
+                                ${transcript.map((h, i) => {
+                    // Generate star display for score (HR-style: whole numbers 1-5)
+                    let scoreDisplay = '';
+                    // Use total_score_out_of_5 if available (more accurate), otherwise use score_out_of_5
+                    const score = h.total_score_out_of_5 !== undefined ? h.total_score_out_of_5 : (h.score_out_of_5 !== undefined ? h.score_out_of_5 : null);
+                    
+                    if (score !== null && score !== undefined) {
+                        const fullStars = Math.floor(score);
+                        const hasHalfStar = (score - fullStars) >= 0.5;
+                        const stars = '⭐'.repeat(fullStars) + (hasHalfStar ? '✨' : '') + '☆'.repeat(5 - fullStars - (hasHalfStar ? 1 : 0));
+
+                        // Color based on score
+                        let scoreColor = '#f5576c'; // Red for low (1-2)
+                        if (score >= 4.0) scoreColor = '#4facfe'; // Blue for high (4-5)
+                        else if (score >= 3.0) scoreColor = '#43e97b'; // Green for medium (3)
+
+                        // Display as whole number if it's a whole number (HR-style: 1, 2, 3, 4, 5)
+                        const scoreDisplayText = score % 1 === 0 ? `${score}/5` : `${score.toFixed(1)}/5`;
+
+                        // Build detailed breakdown if available
+                        let detailedBreakdown = '';
+                        if (h.scores && typeof h.scores === 'object') {
+                            const scores = h.scores;
+                            detailedBreakdown = `
+                                <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; font-size: 0.85rem;">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <div><strong>Grammar & Clarity:</strong> ${(scores.grammar_clarity || 0).toFixed(2)}/1.5</div>
+                                        <div><strong>Communication:</strong> ${(scores.communication_quality || 0).toFixed(2)}/1.5</div>
+                                        <div><strong>Relevance:</strong> ${(scores.relevance_experience || 0).toFixed(2)}/1.0</div>
+                                        <div><strong>Confidence:</strong> ${(scores.confidence || 0).toFixed(2)}/1.0</div>
+                                    </div>
+                                    ${h.justification ? `<div style="color: var(--text-secondary); font-style: italic; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05);">${h.justification}</div>` : ''}
+                                </div>
+                            `;
+                        } else if (h.justification) {
+                            detailedBreakdown = `
+                                <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                                    ${h.justification}
+                                </div>
+                            `;
+                        }
+
+                        scoreDisplay = `
+                                            <div style="margin-top: 0.75rem;">
+                                                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                                                    <span style="background: linear-gradient(135deg, ${scoreColor}, ${scoreColor}dd); color: white; padding: 0.4rem 0.9rem; border-radius: 1rem; font-weight: 700; font-size: 0.9rem;">
+                                                        ${scoreDisplayText}
+                                                    </span>
+                                                    <span style="font-size: 1rem; letter-spacing: 2px;">${stars}</span>
+                                                    ${h.rating ? `<span style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600;">(${h.rating})</span>` : ''}
+                                                </div>
+                                                ${detailedBreakdown}
+                                            </div>
+                                        `;
+                    }
+
+                    return `
+                                        <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                            <p style="color: var(--accent); font-weight: 500; margin-bottom: 0.5rem;">Q${i + 1}: ${h.question}</p>
+                                            <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">A: ${h.answer}</p>
+                                            ${scoreDisplay}
+                                        </div>
+                                    `;
+                }).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${aptitude.length > 0 ? `
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">🎯 Aptitude Results</h3>
+                            <div style="background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 0.75rem;">
+                                ${aptitude.map((a, i) => `
+                                    <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem; border-left: 4px solid ${a.is_correct ? '#4facfe' : '#f5576c'};">
+                                        <p style="margin-bottom: 0.5rem; font-weight: 600;">${i + 1}. ${a.question}</p>
+                                        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 0.25rem;">Candidate: ${a.given}</p>
+                                        <p style="color: ${a.is_correct ? '#4facfe' : '#f5576c'}; font-size: 0.9rem; font-weight: 600;">
+                                            ${a.is_correct ? '✅ Correct' : '❌ Incorrect'} (Key: ${a.correct})
+                                        </p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                content.innerHTML = html;
+                document.getElementById('details-view').classList.remove('hidden');
+                document.getElementById('details-view').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert('Failed to load results: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function closeDetails() {
+            document.getElementById('details-view').classList.add('hidden');
+        }
+
+        async function deleteResult(result_id, name) {
+            if (!confirm(`Are you sure you want to delete this specific interview record for ${name}?\n\nThis action cannot be undone!`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/result/${result_id}`, {
+                    method: 'DELETE'
+                });
+
+                if (resp.ok) {
+                    const row = document.getElementById(`result-${result_id}`);
+                    if (row) {
+                        row.style.animation = 'fadeOut 0.3s ease-out';
+                        setTimeout(() => {
+                            row.remove();
+                            const list = document.getElementById('candidate-list');
+                            if (list.children.length === 0) {
+                                list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No candidates yet.</td></tr>';
+                            }
+                        }, 300);
+                    }
+                    closeDetails();
+                    alert(`✅ Record deleted successfully!`);
+                } else {
+                    throw new Error('Failed to delete result');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // Load candidates on page load
+        loadCandidates();
+    </script>
+</body>
+
+</html>

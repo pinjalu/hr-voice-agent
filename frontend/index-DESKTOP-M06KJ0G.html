@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Assistant 🎤</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="branded-header">
+        <div class="brand-logo">Empiric <span>Infotech</span></div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">AI INTERVIEW PORTAL</div>
+    </header>
+
+    <div class="container" id="app">
+        <!-- Global Feedback Message -->
+        <div class="feedback" id="feedback"></div>
+
+        <!-- Registration View -->
+        <div id="registration-view" class="card">
+            <h1>Welcome to <span>Empiric Infotech</span></h1>
+            <div class="accent-line"></div>
+            <p class="subtitle">Join our team of innovators. Start your AI-powered voice interview today.</p>
+
+            <div class="form-group">
+                <label>👤 Full Name</label>
+                <input type="text" id="name" placeholder="John Doe">
+            </div>
+
+            <div class="form-group">
+                <label>📧 Work Email</label>
+                <input type="email" id="email" placeholder="john.doe@empiricinfotech.com">
+            </div>
+
+            <button onclick="register()">
+                <span>Get Started</span>
+            </button>
+        </div>
+
+        <!-- Interview View -->
+        <div id="interview-view" class="card hidden">
+            <h1 id="status-title">🎤 Interview in Progress</h1>
+
+            <!-- Progress Bar -->
+            <div class="progress-container" id="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <p class="progress-text" id="progress-text">Question 1 of 10</p>
+            </div>
+
+            <!-- AI Video Avatar -->
+            <div class="video-avatar-container">
+                <div class="video-wrapper">
+                    <img id="avatar-image" src="interviewer.jpg" alt="HR Interviewer" class="avatar-video">
+                    <div class="avatar-status" id="avatar-status">
+                        <span class="status-indicator"></span>
+                        <span class="status-text">Ready to start</span>
+                    </div>
+                </div>
+                <p class="avatar-label">Sarah Johnson - HR Manager</p>
+            </div>
+
+            <!-- Question Display -->
+            <div id="question-text">Initializing your interview...</div>
+
+            <!-- Ready Check Overlay -->
+            <div id="ready-overlay" class="ready-overlay">
+                <div class="ready-content">
+                    <h2>👋 Ready to begin?</h2>
+                    <p>Please ensure your microphone is working and you are in a quiet environment.</p>
+                    <button onclick="beginInterview()" class="start-btn">
+                        <span>▶️ Start Interview</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recording Controls -->
+            <div class="recording-status">
+                <div id="mic-button" class="mic-button inactive" onclick="toggleRecording()">
+                    <svg width="40" height="40" fill="white" viewBox="0 0 24 24">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                        <path
+                            d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                    </svg>
+                </div>
+
+                <!-- Waveform Animation -->
+                <div class="waveform" id="waveform">
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                    <div class="wave-bar"></div>
+                </div>
+            </div>
+
+            <p id="mic-label">🎧 Listen carefully...</p>
+
+
+
+
+            <audio id="audio-player" class="hidden" onended="onAudioEnded()"></audio>
+        </div>
+
+        <!-- Completion View -->
+        <div id="completion-view" class="card hidden completion-card">
+            <div class="completion-content">
+                <div class="success-ring">
+                    <div class="success-icon">✨</div>
+                </div>
+                <h1 class="magic-text">Interview <span>Complete!</span></h1>
+                <div class="accent-line"></div>
+                <h2>Thank you, <span id="display-name">Candidate</span>!</h2>
+                <p class="subtitle closing-message">
+                    You have successfully completed the interview session.
+                    <strong>Our recruitment team will review your profile and contact you very soon.</strong>
+                </p>
+                <div class="success-features">
+                    <div class="feature-item">
+                        <span class="feature-icon">📝</span>
+                        <p>Responses Saved</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <p>Performance Analyzed</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">📞</span>
+                        <p>Next Steps Soon</p>
+                    </div>
+                </div>
+                <div class="closing-footer">
+                    <p>You may now close this window safely.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

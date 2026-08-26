@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Login 🔐</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="branded-header">
+        <div class="brand-logo">Empiric <span>Infotech</span></div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">HR ADMIN LOGIN</div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h1>🔐 Admin Access</h1>
+            <div class="accent-line"></div>
+            <p class="subtitle">Enter your credentials to access the candidate dashboard</p>
+
+            <div class="form-group">
+                <label>👤 Username</label>
+                <input type="text" id="username" placeholder="hr_admin">
+            </div>
+
+            <div class="form-group">
+                <label>🔑 Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+
+            <button onclick="login()">
+                <span>Login Securely</span>
+            </button>
+
+            <div class="feedback" id="feedback"></div>
+
+            <button onclick="location.href='/'" class="dashboard-btn btn-secondary"
+                style="margin: 2rem auto 0; display: block;">
+                <span>← Back to Interview</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Simple client-side authentication (for demo)
+        // In production, use proper backend authentication
+        const HR_CREDENTIALS = {
+            username: 'hr_admin',
+            password: 'hr123'
+        };
+
+        function showFeedback(message) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = message;
+            feedback.classList.add('show');
+            setTimeout(() => feedback.classList.remove('show'), 3000);
+        }
+
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                showFeedback('⚠️ Please enter both username and password');
+                return;
+            }
+
+            if (username === HR_CREDENTIALS.username && password === HR_CREDENTIALS.password) {
+                // Store login status
+                sessionStorage.setItem('hr_logged_in', 'true');
+                showFeedback('✅ Login successful! Redirecting...');
+                setTimeout(() => {
+                    window.location.href = '/dashboard.html';
+                }, 1000);
+            } else {
+                showFeedback('❌ Invalid credentials. Try: hr_admin / hr123');
+            }
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    </script>
+</body>
+
+</html>

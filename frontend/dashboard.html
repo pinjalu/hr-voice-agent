@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Dashboard 📊</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header class="branded-header">
+        <div class="brand-logo">Empiric <span>Infotech</span></div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">HR ADMIN PORTAL</div>
+    </header>
+
+    <div class="container dashboard-container">
+        <div class="card">
+            <h1>📊 HR Admin Dashboard</h1>
+            <div class="accent-line"></div>
+            <p class="subtitle">Review candidate performance and interview results</p>
+
+            <div style="margin-bottom: 3rem; display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="location.href='/'" class="dashboard-btn btn-secondary">
+                    <span>← Back to Interview</span>
+                </button>
+                <button onclick="loadCandidates()" class="dashboard-btn">
+                    <span>🔄 Refresh Data</span>
+                </button>
+            </div>
+
+            <table id="candidate-table">
+                <thead>
+                    <tr>
+                        <th>👤 Candidate</th>
+                        <th>📧 Email</th>
+                        <th>📈 Score</th>
+                        <th>🎯 Status</th>
+                        <th>⚙️ Action</th>
+                    </tr>
+                </thead>
+                <tbody id="candidate-list">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                            Loading candidates...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Details Modal -->
+            <div id="details-view" class="hidden"
+                style="margin-top: 3rem; background: rgba(255,255,255,0.03); padding: 2rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="margin-bottom: 1.5rem;">📋 Candidate Details</h2>
+                <div id="details-content"></div>
+                <button onclick="closeDetails()" style="margin-top: 1.5rem; width: auto; padding: 0.75rem 1.5rem;">
+                    <span style="position: relative; z-index: 1;">✕ Close</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        if (!sessionStorage.getItem('hr_logged_in')) {
+            window.location.href = '/hr_login.html';
+        }
+
+        async function loadCandidates() {
+            const list = document.getElementById('candidate-list');
+            list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">Loading...</td></tr>';
+
+            try {
+                const resp = await fetch('/candidates');
+                const data = await resp.json();
+
+                if (data.length === 0) {
+                    list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No candidates yet. Complete an interview to see results here!</td></tr>';
+                    return;
+                }
+
+                list.innerHTML = '';
+
+                data.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.style.animation = 'fadeIn 0.5s ease-out';
+                    tr.id = `candidate-${c.id}`;
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: var(--secondary);">${c.name}</td>
+                        <td style="color: var(--text-secondary); font-weight: 600;">${c.email}</td>
+                        <td><strong style="font-size: 1.2rem; color: var(--primary);">${c.score.toFixed(1)}</strong></td>
+                        <td><span class="status-badge status-${c.status.toLowerCase()}">${c.status}</span></td>
+                        <td style="display: flex; gap: 0.5rem;">
+                            <button onclick="viewCandidate(${c.id})" class="dashboard-btn btn-secondary">
+                                👁️ View
+                            </button>
+                            <button onclick="deleteCandidate(${c.id}, '${c.name}')" class="dashboard-btn btn-delete">
+                                🗑️ Delete
+                            </button>
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                });
+            } catch (error) {
+                list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: #f5576c;">Failed to load candidates. Please refresh.</td></tr>';
+                console.error(error);
+            }
+        }
+
+        async function viewCandidate(id) {
+            try {
+                const resp = await fetch(`/candidate/${id}`);
+                const data = await resp.json();
+                const content = document.getElementById('details-content');
+
+                // Safely parse transcript
+                let transcript = [];
+                try {
+                    transcript = data.final && data.final.transcript ? JSON.parse(data.final.transcript) : [];
+                } catch (e) {
+                    console.error('Error parsing transcript:', e);
+                }
+
+                let html = `
+                    <div style="display: grid; gap: 1.5rem;">
+                        <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem;">
+                            <p style="margin-bottom: 0.5rem;"><strong>Name:</strong> ${data.candidate.name}</p>
+                            <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> ${data.candidate.email}</p>
+                            <p><strong>Date:</strong> ${new Date(data.candidate.created_at).toLocaleDateString()}</p>
+                        </div>
+                        
+                        ${data.final ? `
+                        <div style="background: rgba(0, 210, 255, 0.1); padding: 1.5rem; border-radius: 0.75rem;">
+                            <h3 style="margin-bottom: 1rem;">📊 Scores</h3>
+                            <p style="margin-bottom: 0.5rem;">Interview Score: <strong>${data.final.interview_score.toFixed(1)}</strong></p>
+                            <p style="margin-bottom: 0.5rem;">Aptitude Score: <strong>${data.final.aptitude_score.toFixed(1)}%</strong></p>
+                            <p>Total Score: <strong style="font-size: 1.2rem; color: var(--accent);">${data.final.total_score.toFixed(1)}</strong></p>
+                        </div>
+                        ` : ''}
+                        
+                        ${transcript.length > 0 ? `
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">💬 Interview Transcript</h3>
+                            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem; max-height: 300px; overflow-y: auto;">
+                                ${transcript.map((h, i) => `
+                                    <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <p style="color: var(--accent); font-weight: 500; margin-bottom: 0.5rem;">Q${i + 1}: ${h.question}</p>
+                                        <p style="color: var(--text-secondary);">A: ${h.answer}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : '<p style="color: var(--text-secondary);">No transcript available yet.</p>'}
+                        
+                        ${data.aptitude && data.aptitude.length > 0 ? `
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">🎯 Aptitude Results</h3>
+                            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem;">
+                                ${data.aptitude.map(a => `
+                                    <div style="margin-bottom: 1rem; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 0.5rem;">
+                                        <p style="margin-bottom: 0.5rem;"><strong>${a.question_text}</strong></p>
+                                        <p style="color: var(--text-secondary);">Given: ${a.given_answer}</p>
+                                        <p style="color: ${a.is_correct ? '#4facfe' : '#f5576c'};">
+                                            ${a.is_correct ? '✅ Correct' : '❌ Incorrect'} (Answer: ${a.correct_answer})
+                                        </p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                content.innerHTML = html;
+                document.getElementById('details-view').classList.remove('hidden');
+                document.getElementById('details-view').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert('Failed to load candidate details: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function closeDetails() {
+            document.getElementById('details-view').classList.add('hidden');
+        }
+
+        async function deleteCandidate(id, name) {
+            // Confirmation dialog
+            if (!confirm(`Are you sure you want to delete ${name}'s interview record?\n\nThis action cannot be undone!`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/candidate/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (resp.ok) {
+                    // Remove the row from the table with animation
+                    const row = document.getElementById(`candidate-${id}`);
+                    if (row) {
+                        row.style.animation = 'fadeOut 0.3s ease-out';
+                        setTimeout(() => {
+                            row.remove();
+                            // Check if table is empty
+                            const list = document.getElementById('candidate-list');
+                            if (list.children.length === 0) {
+                                list.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-secondary);">No candidates yet. Complete an interview to see results here!</td></tr>';
+                            }
+                        }, 300);
+                    }
+
+                    // Close details view if it's open for this candidate
+                    closeDetails();
+
+                    alert(`✅ ${name}'s record has been deleted successfully!`);
+                } else {
+                    throw new Error('Failed to delete candidate');
+                }
+            } catch (error) {
+                alert('❌ Failed to delete candidate: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // Load candidates on page load
+        loadCandidates();
+    </script>
+</body>
+
+</html>
